@@ -30,7 +30,7 @@
     },
     "input_data": {
       "global_values": {
-        "app_id": "com.adobe.reader",
+        "app_id": "com.twitter.android",
         "default_owner_id": "don:identity:dvrv-us-1:devo/1G4Dqio1VV:devu/1",
         "default_part_id": "don:core:dvrv-us-1:devo/1G4Dqio1VV:feature/5",
         "llm_model_to_use": "mixtral-8x7b-instruct"

@@ -193,6 +193,7 @@ export const run = async (events: any[]) => {
       continue
     }
     let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, 'Fetching reviews from Playstore', 1);
+    console.log(postResp);
     if (!postResp.success) {
       console.error(`Error while creating timeline entry: ${postResp.message}`);
       continue;
