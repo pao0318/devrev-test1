@@ -1,3 +1,166 @@
+// import {publicSDK } from '@devrev/typescript-sdk';
+// import * as gplay from "google-play-scraper";
+// import { ApiUtils, HTTPResponse } from './utils';
+// import {LLMUtils} from './llm_utils';
+// import axios from 'axios';
+
+// export const run = async (events: any[]) => {
+//   for (const event of events) {
+//     const endpoint: string = event.execution_metadata.devrev_endpoint;
+//     const token: string = event.context.secrets.service_account_token;
+//     const fireWorksApiKey: string = event.input_data.keyrings.fireworks_api_key;
+//     const apiUtil: ApiUtils = new ApiUtils(endpoint, token);
+//     // Get the number of reviews to fetch from command args.
+//     const snapInId = event.context.snap_in_id;
+//     const inputs = event.input_data.global_values;
+//     let parameters:string = event.payload.parameters.trim();
+//     const tags = event.input_data.resources.tags;
+//     const llmUtil: LLMUtils = new LLMUtils(fireWorksApiKey, `gpt-3.5-turbo-0125`, 200);
+//     let numReviews = 10;
+//     let commentID : string | undefined;
+
+//     let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, 'Fetching reviews from Playstore', 1);
+//     if (!postResp.success) {
+//       continue;
+//     }
+//     if (!parameters) {
+//       // Default to 10 reviews.
+//       parameters = '10';
+//     }
+//     try {
+//       numReviews = parseInt(parameters);
+
+//       if (!Number.isInteger(numReviews)) {
+//         throw new Error('Not a valid number');
+//       }
+//     } catch (err) {
+//       postResp  = await apiUtil.postTextMessage(snapInId, 'Please enter a valid number', commentID);
+//       if (!postResp.success) {
+//         continue;
+//       }
+//       commentID = postResp.data.timeline_entry.id;
+//     }
+//     // Make sure number of reviews is <= 100.
+//     if (numReviews > 100) {
+//       postResp  = await apiUtil.postTextMessage(snapInId, 'Please enter a number less than 100', commentID);
+//       if (!postResp.success) {
+//         continue;
+//       }
+//       commentID = postResp.data.timeline_entry.id;
+//     }
+//     // Call google playstore scraper to fetch those number of reviews.
+//     let getReviewsResponse:any = await gplay.reviews({
+//       appId: inputs['app_id'],
+//       sort: gplay.sort.RATING,
+//       num: numReviews,
+//       throttle: 10,
+//     });
+//     // Post an update about the number of reviews fetched.
+//     postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Fetched ${numReviews} reviews, creating tickets now.`, 1);
+//     if (!postResp.success) {
+//       continue;
+//     }
+//     commentID = postResp.data.timeline_entry.id;
+//     let reviews:gplay.IReviewsItem[] = getReviewsResponse.data;
+
+//     // For each review, create a ticket in DevRev.
+//     for(const review of reviews) {
+//       console.log('reviews',review );
+//       postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Creating ticket for review: ${review.url}`, 1);
+//       if (!postResp.success) {
+//         continue;
+//       }
+//       const reviewText = `Ticket created from Playstore review ${review.url}\n\n${review.text}`;
+//       const reviewTitle = review.title || `Ticket created from Playstore review ${review.url}`;
+
+//       const systemPrompt = `You are an expert at labelling a given Google Play Store Review as bug, feature_request, question or feedback. You are given a review provided by a user for the app {app_id}. You have to label the review as bug, feature_request, question or feedback.Just give one string of these options`;
+//       let humanPrompt = review.text;
+
+//       let llmResponse = {}
+//       try {
+//          llmResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+//             model: 'gpt-3.5-turbo',
+//             messages: [
+//                 {
+//                     role: 'system',
+//                     content: systemPrompt,
+//                 },
+//                 {
+//                     role: 'user',
+//                     content: humanPrompt,
+//                 },
+//             ],
+//         }, {
+//             headers: {
+//                 'Content-Type': 'application/json',
+//                 'Authorization': 'Bearer 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',
+//             }
+//         });
+//         postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Call happened ${(llmResponse as any).choices[0]?.message?.content}`, 1);
+//         console.log('response',llmResponse );
+
+//     }
+//     catch (err) {
+//         postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `No llm response fetched for this ticket huihuio`, 1);
+//         if (!postResp.success) {
+//           continue;
+//         }
+//       }
+
+//       let inferredCategory = 'failed_to_infer_category';
+
+//         if ('choices' in llmResponse && Array.isArray((llmResponse as any).choices) && (llmResponse as any).choices.length > 0) {
+//             const inferredCategoryContent = (llmResponse as any).choices[0]?.message?.content;
+//             postResp = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Category inferred ${inferredCategory}`, 1);
+
+//             if (inferredCategoryContent) {
+//                 try {
+//                     const inferredCategoryObject = JSON.parse(inferredCategoryContent);
+//                     const inferredCategory = inferredCategoryObject?.category;
+
+//                     if (inferredCategory && inferredCategory in tags) {
+//                         postResp = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Category of review: ${inferredCategory}`, 1);
+//                         if (!postResp.success) {
+//                             // Handle error when posting response...
+//                         }
+//                     } else {
+//                         postResp = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Category inferred ${inferredCategory} is not in tags ${tags}`, 1);
+//                         if (!postResp.success) {
+//                             // Handle error when posting response...
+//                         }
+//                     }
+//                 } catch (error) {
+//                     console.error('Error parsing inferred category content:', error);
+//                 }
+//             }
+//         }
+
+//       // Create a ticket with title as review title and description as review text.
+//       const createTicketResp = await apiUtil.createTicket({
+//         title: reviewTitle,
+//         tags: [{id: tags[inferredCategory].id}],
+//         body: reviewText,
+//         type: publicSDK.WorkType.Ticket,
+//         owned_by: [inputs['default_owner_id']],
+//         applies_to_part: inputs['default_part_id'],
+//       });
+//       if (!createTicketResp.success) {
+//         continue;
+//       }
+//       // Post a message with ticket ID.
+//       const ticketID = createTicketResp.data.work.id;
+//       const ticketCreatedMessage = inferredCategory != 'failed_to_infer_category' ? `Created ticket: <${ticketID}> and it is categorized as ${inferredCategory}` : `Created ticket: <${ticketID}> and it failed to be categorized`;
+//       const postTicketResp: HTTPResponse  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, ticketCreatedMessage, 1);
+//       if (!postTicketResp.success) {
+//         continue;
+//       }
+//     }
+//   }
+
+// };
+
+// export default run;
+
 import {publicSDK } from '@devrev/typescript-sdk';
 import * as gplay from "google-play-scraper";
 import { ApiUtils, HTTPResponse } from './utils';
@@ -78,6 +241,7 @@ export const run = async (events: any[]) => {
     let reviews:gplay.IReviewsItem[] = getReviewsResponse.data;
     // For each review, create a ticket in DevRev.
     for(const review of reviews) {
+      console.log('reviews are', review)
       // Post a progress message saying creating ticket for review with review URL posted.
       postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Creating ticket for review: ${review.url}`, 1);
       if (!postResp.success) {
@@ -93,6 +257,7 @@ export const run = async (events: any[]) => {
       let llmResponse = {};
       try {
         llmResponse = await llmUtil.chatCompletion(systemPrompt, humanPrompt, {review: (reviewTitle ? reviewTitle + '\n' + reviewText: reviewText)})
+        console.log(llmResponse, 'llmbadwa');
       } catch (err) {
         console.error(`Error while calling LLM: ${err}`);
       }
