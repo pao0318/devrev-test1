@@ -87,19 +87,14 @@ inputs:
 
 tags:
   - name: generate_tweet
-    description: "This is a bug"
-  - name: get_hashtags
-    description: "This is a feature request"
-  - name: question
-    description: "This is a question"
-  - name: feedback
-    description: "This is a feedback"
-  - name: failed_to_infer_category
-    description: "Failed to infer category"
+    description: "This generates tweet with hashtag"
+  - name: generate_hashtags
+    description: "This gives relevant hashtags"
+
 
 
 commands:
-  - name: get_hashtag
+  - name: get_hashtags
     namespace: devrev
     description: Fetches hashtags
     surfaces:
@@ -121,4 +116,4 @@ commands:
 
 functions:
   - name: process_playstore_reviews
-    description: Boosts your social platform
+    description: Generates tweet with popular hashtags

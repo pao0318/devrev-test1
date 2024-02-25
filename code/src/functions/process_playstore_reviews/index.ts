@@ -20,55 +20,12 @@ export const run = async (events: any[]) => {
     let numReviews = 10;
     let commentID : string | undefined;
 
-
-    // if (parameters === 'help') {
-    //   // Send a help message in CLI help format.
-    //   const helpMessage = `get_hashtag - Fetch trending hashtags`;
-    //   let postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, helpMessage, 1);
-    //   if (!postResp.success) {
-    //     console.error(`Error while creating timeline entry: ${postResp.message}`);
-    //     continue;
-    //   }
-    //   continue
-    // }
-    // let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, 'Fetching reviews from Playstore', 1);
-    // console.log(postResp);
-    // if (!postResp.success) {
-    //   console.error(`Error while creating timeline entry: ${postResp.message}`);
-    //   continue;
-    // }
     var params: string[] = [];
     if (typeof parameters === 'string' && parameters !== 'help') {
       params = parameters.split(' ');
       let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Parameters provided ${params}`, 1); 
     }
-    // // Call google playstore scraper to fetch those number of reviews.
-    // let getReviewsResponse:any = await gplay.reviews({
-    //   appId: inputs['app_id'],
-    //   sort: gplay.sort.RATING,
-    //   num: numReviews,
-    //   throttle: 10,
-    // });
-    // // Post an update about the number of reviews fetched.
-    // postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Fetched ${numReviews} reviews, creating tickets now.`, 1);
-    // if (!postResp.success) {
-    //   console.error(`Error while creating timeline entry: ${postResp.message}`);
-    //   continue;
-    // }
-    // commentID = postResp.data.timeline_entry.id;
-    // let reviews:gplay.IReviewsItem[] = getReviewsResponse.data;
-    // // For each review, create a ticket in DevRev.
-    // for(const review of reviews) {
-    //   // Post a progress message saying creating ticket for review with review URL posted.
-    //   postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Creating ticket for review: ${review.url}`, 1);
-    //   if (!postResp.success) {
-    //     console.error(`Error while creating timeline entry: ${postResp.message}`);
-    //     continue;
-    //   }
-      // const reviewText = `Ticket created from Playstore review ${review.url}\n\n${review.text}`;
-      // const reviewTitle = review.title || `Ticket created from Playstore review ${review.url}`;
-      // const reviewID = review.id;
-      // const systemPrompt = `You are an expert at labelling a given Google Play Store Review as bug, feature_request, question or feedback. You are given a review provided by a user for the app ${inputs['app_id']}. You have to label the review as bug, feature_request, question or feedback. The output should be a JSON with fields "category" and "reason". The "category" field should be one of "bug", "feature_request", "question" or "feedback". The "reason" field should be a string explaining the reason for the category. \n\nReview: {review}\n\nOutput:`;
+
       const systemPrompt = `You are an expert at analyzing a given phrase of three/four words and generating a short trendy caption/tweet using individual words of that phrase. You are given a phrase of about three/four words provided by a user for the app ${inputs['app_id']}. The input given to you is ${params}. You have to generate a JSON output with fields "text" of type string and "hashtags" of type array of strings. The "text" field should be a small catchy tweet or caption related to ${params} provided by user as input. The "hashtags" field should be three to four proper hashtags in an array that fits the text field that is generated`;
       const humanPrompt = ``;
 
@@ -80,44 +37,6 @@ export const run = async (events: any[]) => {
       } catch (err) {
         console.error(`Error while calling LLM: ${err}`);
       }
-
-    //   let tagsToApply = [];
-    //   let inferredCategory = 'failed_to_infer_category';
-
-    //   // Create a ticket with title as review title and description as review text.
-    //   const createTicketResp = await apiUtil.createTicket({
-    //     title: reviewTitle,
-    //     tags: [{id: tags[inferredCategory].id}],
-    //     body: reviewText,
-    //     type: publicSDK.WorkType.Ticket,
-    //     owned_by: [inputs['default_owner_id']],
-    //     applies_to_part: inputs['default_part_id'],
-    //   });
-    //   if (!createTicketResp.success) {
-    //     console.error(`Error while creating ticket: ${createTicketResp.message}`);
-    //     continue;
-    //   }
-    //   // Post a message with ticket ID.
-    //   const ticketID = createTicketResp.data.work.id;
-    //   const ticketCreatedMessage = inferredCategory != 'failed_to_infer_category' ? `Created ticket: <${ticketID}> and it is categorized as ${inferredCategory}` : `Created ticket: <${ticketID}> and it failed to be categorized`;
-    //   const postTicketResp: HTTPResponse  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, ticketCreatedMessage, 1);
-    //   if (!postTicketResp.success) {
-    //     console.error(`Error while creating timeline entry: ${postTicketResp.message}`);
-    //     continue;
-    //   }
-    // }
-
-
-       // for fetching username
-
-    // let xx: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Fetching hashtags for username ${parameters}`, 1);
-
-    // let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Top trending hashtags are #Ukraine #Royval #SAGAwards #Leon`, 1);
-
-
-    // let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Reflecting on the delicate balance of power in global politics. Let's advocate for diplomacy and understanding #Ukraine #Royval #SAGAwards #Leon`, 1);
-
-    // Create a ticket with hashtags
 
       const createTicketResp = await apiUtil.createTicket({
         title: 'generate tweet',
