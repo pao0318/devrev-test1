@@ -1,5 +1,5 @@
 version: "2"
-name: "Google playstore reviews to Tickets"
+name: "Upskill Socially"
 description: "Creates tickets from Google playstore reviews and categorize them into one-of `bug`, `feedback`, `feature_request` or `question`."
 
 service_account:
@@ -85,11 +85,10 @@ inputs:
       ui:
         display_name: LLM Model to use.
 
-
 tags:
-  - name: bug
+  - name: generate_tweet
     description: "This is a bug"
-  - name: feature_request
+  - name: get_hashtags
     description: "This is a feature request"
   - name: question
     description: "This is a question"
@@ -107,10 +106,19 @@ commands:
       - surface: discussions
         object_types:
           - snap_in
-    usage_hint: "/get_hashtag [number of reviews to fetch and process]"
+    usage_hint: "/get_hashtag [Fetches top trending hastags]"
+    function: process_playstore_reviews
+  - name: generate_tweets
+    namespace: devrev
+    description: Generates tweet with popular hashtags
+    surfaces:
+      - surface: discussions
+        object_types:
+          - snap_in
+    usage_hint: "/generate_tweets [username]"
     function: process_playstore_reviews
 
 
 functions:
   - name: process_playstore_reviews
-    description: Fetches reviews from Google Playstore and creates tickets
+    description: Boosts your social platform

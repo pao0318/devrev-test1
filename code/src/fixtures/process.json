@@ -4,7 +4,7 @@
       "actor_id": "don:identity:dvrv-us-1:devo/1G4Dqio1VV:devu/1",
       "command_id": "don:integration:dvrv-us-1:devo/1G4Dqio1VV:namespace/devrev:command/p2",
       "dev_org": "don:identity:dvrv-us-1:devo/1G4Dqio1VV",
-      "parameters": "1",
+      "parameters": "",
       "parent_id": "don:integration:dvrv-us-1:devo/1G4Dqio1VV:snap_in/9118ba53-644a-487b-a605-fa78b722ce7f",
       "request_id": "QuiDQPDbdWymWG7cIrkozA",
       "source_id": "don:integration:dvrv-us-1:devo/1G4Dqio1VV:snap_in/9118ba53-644a-487b-a605-fa78b722ce7f",
