@@ -1,170 +1,8 @@
-// import {publicSDK } from '@devrev/typescript-sdk';
-// import * as gplay from "google-play-scraper";
-// import { ApiUtils, HTTPResponse } from './utils';
-// import {LLMUtils} from './llm_utils';
-// import axios from 'axios';
-
-// export const run = async (events: any[]) => {
-//   for (const event of events) {
-//     const endpoint: string = event.execution_metadata.devrev_endpoint;
-//     const token: string = event.context.secrets.service_account_token;
-//     const fireWorksApiKey: string = event.input_data.keyrings.fireworks_api_key;
-//     const apiUtil: ApiUtils = new ApiUtils(endpoint, token);
-//     // Get the number of reviews to fetch from command args.
-//     const snapInId = event.context.snap_in_id;
-//     const inputs = event.input_data.global_values;
-//     let parameters:string = event.payload.parameters.trim();
-//     const tags = event.input_data.resources.tags;
-//     const llmUtil: LLMUtils = new LLMUtils(fireWorksApiKey, `gpt-3.5-turbo-0125`, 200);
-//     let numReviews = 10;
-//     let commentID : string | undefined;
-
-//     let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, 'Fetching reviews from Playstore', 1);
-//     if (!postResp.success) {
-//       continue;
-//     }
-//     if (!parameters) {
-//       // Default to 10 reviews.
-//       parameters = '10';
-//     }
-//     try {
-//       numReviews = parseInt(parameters);
-
-//       if (!Number.isInteger(numReviews)) {
-//         throw new Error('Not a valid number');
-//       }
-//     } catch (err) {
-//       postResp  = await apiUtil.postTextMessage(snapInId, 'Please enter a valid number', commentID);
-//       if (!postResp.success) {
-//         continue;
-//       }
-//       commentID = postResp.data.timeline_entry.id;
-//     }
-//     // Make sure number of reviews is <= 100.
-//     if (numReviews > 100) {
-//       postResp  = await apiUtil.postTextMessage(snapInId, 'Please enter a number less than 100', commentID);
-//       if (!postResp.success) {
-//         continue;
-//       }
-//       commentID = postResp.data.timeline_entry.id;
-//     }
-//     // Call google playstore scraper to fetch those number of reviews.
-//     let getReviewsResponse:any = await gplay.reviews({
-//       appId: inputs['app_id'],
-//       sort: gplay.sort.RATING,
-//       num: numReviews,
-//       throttle: 10,
-//     });
-//     // Post an update about the number of reviews fetched.
-//     postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Fetched ${numReviews} reviews, creating tickets now.`, 1);
-//     if (!postResp.success) {
-//       continue;
-//     }
-//     commentID = postResp.data.timeline_entry.id;
-//     let reviews:gplay.IReviewsItem[] = getReviewsResponse.data;
-
-//     // For each review, create a ticket in DevRev.
-//     for(const review of reviews) {
-//       console.log('reviews',review );
-//       postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Creating ticket for review: ${review.url}`, 1);
-//       if (!postResp.success) {
-//         continue;
-//       }
-//       const reviewText = `Ticket created from Playstore review ${review.url}\n\n${review.text}`;
-//       const reviewTitle = review.title || `Ticket created from Playstore review ${review.url}`;
-
-//       const systemPrompt = `You are an expert at labelling a given Google Play Store Review as bug, feature_request, question or feedback. You are given a review provided by a user for the app {app_id}. You have to label the review as bug, feature_request, question or feedback.Just give one string of these options`;
-//       let humanPrompt = review.text;
-
-//       let llmResponse = {}
-//       try {
-//          llmResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
-//             model: 'gpt-3.5-turbo',
-//             messages: [
-//                 {
-//                     role: 'system',
-//                     content: systemPrompt,
-//                 },
-//                 {
-//                     role: 'user',
-//                     content: humanPrompt,
-//                 },
-//             ],
-//         }, {
-//             headers: {
-//                 'Content-Type': 'application/json',
-//                 'Authorization': 'Bearer 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',
-//             }
-//         });
-//         postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Call happened ${(llmResponse as any).choices[0]?.message?.content}`, 1);
-//         console.log('response',llmResponse );
-
-//     }
-//     catch (err) {
-//         postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `No llm response fetched for this ticket huihuio`, 1);
-//         if (!postResp.success) {
-//           continue;
-//         }
-//       }
-
-//       let inferredCategory = 'failed_to_infer_category';
-
-//         if ('choices' in llmResponse && Array.isArray((llmResponse as any).choices) && (llmResponse as any).choices.length > 0) {
-//             const inferredCategoryContent = (llmResponse as any).choices[0]?.message?.content;
-//             postResp = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Category inferred ${inferredCategory}`, 1);
-
-//             if (inferredCategoryContent) {
-//                 try {
-//                     const inferredCategoryObject = JSON.parse(inferredCategoryContent);
-//                     const inferredCategory = inferredCategoryObject?.category;
-
-//                     if (inferredCategory && inferredCategory in tags) {
-//                         postResp = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Category of review: ${inferredCategory}`, 1);
-//                         if (!postResp.success) {
-//                             // Handle error when posting response...
-//                         }
-//                     } else {
-//                         postResp = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Category inferred ${inferredCategory} is not in tags ${tags}`, 1);
-//                         if (!postResp.success) {
-//                             // Handle error when posting response...
-//                         }
-//                     }
-//                 } catch (error) {
-//                     console.error('Error parsing inferred category content:', error);
-//                 }
-//             }
-//         }
-
-//       // Create a ticket with title as review title and description as review text.
-//       const createTicketResp = await apiUtil.createTicket({
-//         title: reviewTitle,
-//         tags: [{id: tags[inferredCategory].id}],
-//         body: reviewText,
-//         type: publicSDK.WorkType.Ticket,
-//         owned_by: [inputs['default_owner_id']],
-//         applies_to_part: inputs['default_part_id'],
-//       });
-//       if (!createTicketResp.success) {
-//         continue;
-//       }
-//       // Post a message with ticket ID.
-//       const ticketID = createTicketResp.data.work.id;
-//       const ticketCreatedMessage = inferredCategory != 'failed_to_infer_category' ? `Created ticket: <${ticketID}> and it is categorized as ${inferredCategory}` : `Created ticket: <${ticketID}> and it failed to be categorized`;
-//       const postTicketResp: HTTPResponse  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, ticketCreatedMessage, 1);
-//       if (!postTicketResp.success) {
-//         continue;
-//       }
-//     }
-//   }
-
-// };
-
-// export default run;
-
 import {publicSDK } from '@devrev/typescript-sdk';
 import * as gplay from "google-play-scraper";
 import { ApiUtils, HTTPResponse } from './utils';
 import {LLMUtils} from './llm_utils';
+const axios = require('axios');
 
 export const run = async (events: any[]) => {
   for (const event of events) {
@@ -174,107 +12,98 @@ export const run = async (events: any[]) => {
     const apiUtil: ApiUtils = new ApiUtils(endpoint, token);
     // Get the number of reviews to fetch from command args.
     const snapInId = event.context.snap_in_id;
-    const devrevPAT = event.context.secrets.service_account_token;
-    const baseURL = event.execution_metadata.devrev_endpoint;
     const inputs = event.input_data.global_values;
     let parameters:string = event.payload.parameters.trim();
     const tags = event.input_data.resources.tags;
     const llmUtil: LLMUtils = new LLMUtils(fireWorksApiKey, `accounts/fireworks/models/${inputs['llm_model_to_use']}`, 200);
-    let numReviews = 10;
-    let commentID : string | undefined;
-    if (parameters === 'help') {
-      // Send a help message in CLI help format.
-      const helpMessage = `playstore_reviews_process - Fetch reviews from Google Play Store and create tickets in DevRev.\n\nUsage: /playstore_reviews_process <number_of_reviews_to_fetch>\n\n\`number_of_reviews_to_fetch\`: Number of reviews to fetch from Google Playstore. Should be a number between 1 and 100. If not specified, it defaults to 10.`;
-      let postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, helpMessage, 1);
-      if (!postResp.success) {
-        console.error(`Error while creating timeline entry: ${postResp.message}`);
-        continue;
-      }
-      continue
-    }
-    let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, 'Fetching reviews from Playstore', 1);
-    console.log(postResp);
-    if (!postResp.success) {
-      console.error(`Error while creating timeline entry: ${postResp.message}`);
-      continue;
-    }
-    if (!parameters) {
-      // Default to 10 reviews.
-      parameters = '10';
-    }
-    try {
-      numReviews = parseInt(parameters);
 
-      if (!Number.isInteger(numReviews)) {
-        throw new Error('Not a valid number');
-      }
-    } catch (err) {
-      postResp  = await apiUtil.postTextMessage(snapInId, 'Please enter a valid number', commentID);
-      if (!postResp.success) {
-        console.error(`Error while creating timeline entry: ${postResp.message}`);
-        continue;
-      }
-      commentID = postResp.data.timeline_entry.id;
+    var params: string[] = [];
+    if (typeof parameters === 'string' && parameters !== 'help') {
+      params = parameters.split(' ');
+      let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Parameters provided ${params}`, 1);
     }
-    // Make sure number of reviews is <= 100.
-    if (numReviews > 100) {
-      postResp  = await apiUtil.postTextMessage(snapInId, 'Please enter a number less than 100', commentID);
-      if (!postResp.success) {
-        console.error(`Error while creating timeline entry: ${postResp.message}`);
-        continue;
-      }
-      commentID = postResp.data.timeline_entry.id;
-    }
-    // Call google playstore scraper to fetch those number of reviews.
-    let getReviewsResponse:any = await gplay.reviews({
-      appId: inputs['app_id'],
-      sort: gplay.sort.RATING,
-      num: numReviews,
-      throttle: 10,
-    });
-    // Post an update about the number of reviews fetched.
-    postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Fetched ${numReviews} reviews, creating tickets now.`, 1);
-    if (!postResp.success) {
-      console.error(`Error while creating timeline entry: ${postResp.message}`);
-      continue;
-    }
-    commentID = postResp.data.timeline_entry.id;
-    let reviews:gplay.IReviewsItem[] = getReviewsResponse.data;
-    // For each review, create a ticket in DevRev.
-    for(const review of reviews) {
-      console.log('reviews are', review)
-      // Post a progress message saying creating ticket for review with review URL posted.
-      postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Creating ticket for review: ${review.url}`, 1);
-      if (!postResp.success) {
-        console.error(`Error while creating timeline entry: ${postResp.message}`);
-        continue;
-      }
-      const reviewText = `Ticket created from Playstore review ${review.url}\n\n${review.text}`;
-      const reviewTitle = review.title || `Ticket created from Playstore review ${review.url}`;
-      const reviewID = review.id;
-      const systemPrompt = `You are an expert at labelling a given Google Play Store Review as bug, feature_request, question or feedback. You are given a review provided by a user for the app ${inputs['app_id']}. You have to label the review as bug, feature_request, question or feedback. The output should be a JSON with fields "category" and "reason". The "category" field should be one of "bug", "feature_request", "question" or "feedback". The "reason" field should be a string explaining the reason for the category. \n\nReview: {review}\n\nOutput:`;
-      const humanPrompt = ``;
 
-      let llmResponse = {};
-      try {
-        llmResponse = await llmUtil.chatCompletion(systemPrompt, humanPrompt, {review: (reviewTitle ? reviewTitle + '\n' + reviewText: reviewText)})
-        console.log(llmResponse, 'llmbadwa');
-      } catch (err) {
-        console.error(`Error while calling LLM: ${err}`);
+    if(params.length ==1){
+        var username=params[0];
+        // for getting trending hashtags
+      let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Parameters provided ${parameters}`, 1); 
+
+      if (typeof parameters === 'string' && parameters !== 'help') {
+        username = parameters;
+        let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Parameters provided ${username}`, 1); 
       }
-      let tagsToApply = [];
-      let inferredCategory = 'failed_to_infer_category';
-      if ('category' in llmResponse) {
-        inferredCategory = llmResponse['category'] as string;
-        if (!(inferredCategory in tags)) {
-          inferredCategory = 'failed_to_infer_category';
+      const userInfo = {
+        method: 'GET',
+        url: 'https://twitter154.p.rapidapi.com/user/details',
+        params: { username: username },
+        headers: {
+          'X-RapidAPI-Key': process.env['RAPIDAPI_KEY'],
+          'X-RapidAPI-Host': process.env['RAPIDAPI_HOST']
         }
+      };
+
+      try {
+        const userDetails = await axios.request(userInfo);
+        let postResp1: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `User details fetched ${username}`, 1); 
+
+        var userLocation = userDetails.location;
+
+        let postResp: HTTPResponse = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `User location fetched ${userLocation}`, 1); 
+
+      } catch (error) {
+        console.error(error);
       }
-      // Create a ticket with title as review title and description as review text.
+
+
+    const availableTrends = {
+      method: 'GET',
+      url: 'https://twitter154.p.rapidapi.com/trends/available',
+      headers: {
+        'X-RapidAPI-Key': process.env['RAPIDAPI_KEY'],
+        'X-RapidAPI-Host': process.env['RAPIDAPI_HOST']
+      }
+    }
+
+    try {
+      const response = await axios.request(availableTrends);
+      const trendingList = response.data;
+      const countriesList =  trendingList.filter((item: { country: any; }) => item.country);
+      const countryToWOEIDMap = countriesList.reduce((map: { [x: string]: number; }, item: { country: string | number; }) => (map[item.country] = 1, map), {});
+      console.log(countryToWOEIDMap);
+      var userWoeid = 1;
+      if (userLocation && userLocation in countryToWOEIDMap) {
+        userWoeid = countryToWOEIDMap[userLocation];
+      }
+
+    } catch (error) {
+      console.error(error);
+    }
+
+    const hashtagRequest = {
+      method: 'GET',
+      url: 'https://twitter154.p.rapidapi.com/trends/?woeid=3369',
+      headers: {
+        'X-RapidAPI-Host': 'twitter154.p.rapidapi.com',
+        'X-RapidAPI-Key': '16bab69374mshcb1b27ff71d944ep1507ccjsn7d4e5c5edec4'
+      }
+    };
+    try{
+        const hashtagResponse = axios.request(hashtagRequest);
+        const trendsList = hashtagResponse[0].trends;
+        // Extract top 5 trend names
+        var top5TrendNames = trendsList.slice(0, 5).map((trend: { name: any; }) => trend.name);
+       console.log(top5TrendNames);
+       const postTicketResp: HTTPResponse  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, top5TrendNames, 1);
+    }
+    catch(error){
+      console.log(error)
+    }
+
+
       const createTicketResp = await apiUtil.createTicket({
-        title: reviewTitle,
-        tags: [{id: tags[inferredCategory].id}],
-        body: reviewText,
+        title: 'generate hashtags',
+        tags: [{id: tags['generate_hashtags'].id}],
+        body: `${(top5TrendNames as any)}`,
         type: publicSDK.WorkType.Ticket,
         owned_by: [inputs['default_owner_id']],
         applies_to_part: inputs['default_part_id'],
@@ -283,17 +112,61 @@ export const run = async (events: any[]) => {
         console.error(`Error while creating ticket: ${createTicketResp.message}`);
         continue;
       }
+
       // Post a message with ticket ID.
+      else{
       const ticketID = createTicketResp.data.work.id;
-      const ticketCreatedMessage = inferredCategory != 'failed_to_infer_category' ? `Created ticket: <${ticketID}> and it is categorized as ${inferredCategory}` : `Created ticket: <${ticketID}> and it failed to be categorized`;
+      const ticketCreatedMessage = `Created ticket successfully with id : <${ticketID}>`;
       const postTicketResp: HTTPResponse  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, ticketCreatedMessage, 1);
       if (!postTicketResp.success) {
         console.error(`Error while creating timeline entry: ${postTicketResp.message}`);
         continue;
       }
     }
-    // Call an LLM to categorize the review as Bug, Feature request, or Question.
+    }
+
+
+    // for generating tweets
+    else{
+
+      const systemPrompt = `You are an expert at analyzing a given phrase of three/four words and generating a short trendy caption/tweet using individual words of that phrase. You are given a phrase of about three/four words provided by a user for the app ${inputs['app_id']}. The input given to you is ${params}. You have to generate a JSON output with fields "text" of type string and "hashtags" of type array of strings. The "text" field should be a small catchy tweet or caption related to ${params} provided by user as input. The "hashtags" field should be three to four proper hashtags in an array that fits the text field that is generated`;
+      const humanPrompt = ``;
+
+      let llmResponse: Object = {};
+      try {
+        llmResponse = await llmUtil.chatCompletion(systemPrompt, humanPrompt, {params});
+        console.log((llmResponse as any).text, 'llm response');
+        let postResp = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Creating ticket for review: ${(llmResponse as any).text}`, 1);
+      } catch (err) {
+        console.error(`Error while calling LLM: ${err}`);
+      }
+
+      const createTicketResp = await apiUtil.createTicket({
+        title: 'generate tweet',
+        tags: [{id: tags['generate_tweet'].id}],
+        body: `${(llmResponse as any).text}`,
+        type: publicSDK.WorkType.Ticket,
+        owned_by: [inputs['default_owner_id']],
+        applies_to_part: inputs['default_part_id'],
+      });
+      if (!createTicketResp.success) {
+        console.error(`Error while creating ticket: ${createTicketResp.message}`);
+        continue;
+      }
+
+      // Post a message with ticket ID.
+      else{
+      const ticketID = createTicketResp.data.work.id;
+      const ticketCreatedMessage = `Created ticket successfully with id : <${ticketID}>`;
+      const postTicketResp: HTTPResponse  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, ticketCreatedMessage, 1);
+      if (!postTicketResp.success) {
+        console.error(`Error while creating timeline entry: ${postTicketResp.message}`);
+        continue;
+      }
+    }
   }
-};
+
+  }
+}
 
 export default run;
