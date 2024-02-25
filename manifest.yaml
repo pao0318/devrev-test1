@@ -100,15 +100,15 @@ tags:
 
 
 commands:
-  - name: playstore_reviews_process
+  - name: get_hashtag
     namespace: devrev
-    description: Fetches reviews from Google Playstore and creates tickets
+    description: Fetches hashtags
     surfaces:
       - surface: discussions
         object_types:
           - snap_in
-    usage_hint: "/playstore_reviews_process [number of reviews to fetch and process]"
-    function: process_playstore_reviews
+    usage_hint: "/get_hashtag [number of reviews to fetch and process]"
+    function: get_hashtag
 
 
 functions:

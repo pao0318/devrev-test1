@@ -1,4 +1,4 @@
-import { run } from '../functions/process_playstore_reviews';
+import { run } from '../functions/get_hashtag';
 
 describe('Test some function', () => {
   it('Something', () => {
