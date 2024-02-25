@@ -1,4 +1,4 @@
-import process_playstore_reviews from './functions/get_hashtag';
+import process_playstore_reviews from './functions/process_playstore_reviews';
 
 export const functionFactory = {
   process_playstore_reviews,

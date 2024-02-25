@@ -108,7 +108,7 @@ commands:
         object_types:
           - snap_in
     usage_hint: "/get_hashtag [number of reviews to fetch and process]"
-    function: get_hashtag
+    function: process_playstore_reviews
 
 
 functions:

@@ -19,6 +19,8 @@ export const run = async (events: any[]) => {
     const llmUtil: LLMUtils = new LLMUtils(fireWorksApiKey, `accounts/fireworks/models/${inputs['llm_model_to_use']}`, 200);
     let numReviews = 10;
     let commentID : string | undefined;
+
+
     if (parameters === 'help') {
       // Send a help message in CLI help format.
       const helpMessage = `get_hashtag - Fetch trending hashtags`;
